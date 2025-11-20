@@ -1,0 +1,36 @@
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    daemon
+    maxconn 2048
+    tune.ssl.default-dh-param 2048
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5000
+    timeout client 50000
+    timeout server 50000
+    option forwardfor
+    option http-server-close
+
+frontend http_front
+    bind *:80
+    # Redirect HTTP to HTTPS
+    redirect scheme https code 301 if !{ ssl_fc }
+
+frontend https_front
+    bind *:443 ssl crt /etc/haproxy/certs/www.jobealieu.tech.pem
+    default_backend http_back
+
+backend http_back
+    balance roundrobin
+    server 6787-web-01 98.93.145.166:80 check
+    server 6787-web-02 18.208.133.10:80 check
